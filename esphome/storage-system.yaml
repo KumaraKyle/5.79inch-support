@@ -1,0 +1,80 @@
+esphome:
+  name: storage-system
+  friendly_name: Storage System
+  on_boot:
+    priority: 250
+    then:
+      - logger.log: "Booting custom ESPHome fork with 5.79in E-paper"
+      - script.execute: eink_refresh
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "12345678"
+
+ota:
+  - platform: esphome
+    password: "12345678"
+
+wifi:
+  ssid: "YNHCL47-2.4"
+  password: "hugo06carl07lena15"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Storage-System Fallback Hotspot"
+    password: "b9CfdgngQbxb"
+
+captive_portal:
+
+script:
+  - id: eink_refresh
+    mode: restart
+    then:
+      - output.turn_on: gpio_eink_pwr
+      - component.update: eink
+      - delay: 1min
+      - output.turn_off: gpio_eink_pwr
+
+font:
+  - file: "https://github.com/IdreesInc/Monocraft/releases/download/v3.0/Monocraft.ttf"
+    id: font_main
+    size: 100
+
+output:
+  - platform: gpio
+    id: gpio_eink_pwr
+    pin: GPIO12
+
+spi:
+  clk_pin: 18
+  mosi_pin: 23
+
+display:
+  - platform: waveshare_epaper_custom
+    id: eink
+    cs_pin: 5
+    dc_pin: 17
+    busy_pin:
+      number: 4
+      inverted: true
+    reset_pin: 16
+    model: 5.79in
+    update_interval: never
+    # full_update_every: 30
+    lambda: |-
+      it.filled_rectangle(it.get_width()/2, 0, it.get_width()/2, it.get_height());
+      it.print(it.get_width()/4,   it.get_height()/2,   id(font_main), COLOR_ON,  TextAlign::CENTER, "Lookie");
+      it.print(it.get_width()*3/4, it.get_height()/2,   id(font_main), COLOR_OFF, TextAlign::CENTER, "Here!");
