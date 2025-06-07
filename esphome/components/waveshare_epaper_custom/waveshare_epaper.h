@@ -502,6 +502,12 @@ class WaveshareEPaper5P7In : public WaveshareEPaper {
     this->data(0x01);  // check code
   }
 
+  int get_color_internal() override { return 2; }
+  uint8_t get_color_list_internal(uint8_t indexColor) override {
+    if(indexColor == 1) return display::ColorUtil::color_to_332(Color(255, 0, 0, 0)); // RED
+    return display::ColorUtil::color_to_332(display::COLOR_ON); // BLACK
+  }
+
  protected:
   int get_width_internal() override;
 

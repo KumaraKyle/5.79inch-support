@@ -9,8 +9,8 @@ esphome:
 
 external_components:
   - source:
-      type: local
-      path: components
+      type: git
+      url: https://github.com/KumaraKyle/5.79inch-support
 
 esp32:
   board: esp32dev
@@ -39,6 +39,11 @@ wifi:
 
 captive_portal:
 
+output:
+  - platform: gpio
+    id: gpio_eink_pwr
+    pin: GPIO12
+
 script:
   - id: eink_refresh
     mode: restart
@@ -48,15 +53,210 @@ script:
       - delay: 1min
       - output.turn_off: gpio_eink_pwr
 
+interval:
+  - interval: 1min
+    then:
+      - script.execute: eink_refresh
+
 font:
   - file: "https://github.com/IdreesInc/Monocraft/releases/download/v3.0/Monocraft.ttf"
     id: font_main
     size: 100
 
-output:
-  - platform: gpio
-    id: gpio_eink_pwr
-    pin: GPIO12
+  - file: "fonts/Roboto-Bold.ttf"
+    id: title_font
+    size: 24
+    glyphs:
+      &basic_glyphs [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        " ",
+        ":",
+        "/",
+        "-",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        ".",
+        ",",
+        "%",
+        "°",
+        "(",
+        ")",
+        "+",
+        "_",
+        "&",
+        "@",
+        "!",
+        '"',
+        "µ",
+        "³",
+      ]
+
+  - file: "fonts/Roboto-Medium.ttf"
+    id: gauge_label_font
+    size: 16
+    glyphs: *basic_glyphs
+
+  - file: "fonts/Roboto-Bold.ttf"
+    id: gauge_value_font
+    size: 20
+    glyphs: *basic_glyphs
+
+  - file: "fonts/Roboto-Regular.ttf"
+    id: small_font
+    size: 12
+    glyphs: *basic_glyphs
+
+  - file: "fonts/Roboto-Medium.ttf"
+    id: medium_font
+    size: 14
+    glyphs: *basic_glyphs
+
+  - file: "fonts/materialdesignicons-webfont.ttf"
+    id: mdi_icons
+    size: 24
+    glyphs: [
+        "󰤫", # mdi-wifi-strength-alert-outline
+        "󰤟", # mdi-wifi-strength-1
+        "󰤢", # mdi-wifi-strength-2
+        "󰤥", # mdi-wifi-strength-3
+        "󰤨", # mdi-wifi-strength-4
+        "󰔏", # mdi-thermometer
+        "󰖎", # mdi-water-percent
+        "󰀦", # mdi-alert
+        "󰁹", # mdi-battery
+        "󰤭", # mdi-wifi
+        "󰋘", # mdi-gauge
+        "󰐊", # mdi-chart-line
+        "󰍛", # mdi-air-filter
+      ]
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+sensor:
+  - platform: template
+    name: "Mock Indoor PM2.5"
+    id: pm25_indoor
+    unit_of_measurement: "µg/m³"
+    lambda: |-
+      return 35.0;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock Indoor Temperature"
+    id: temp_indoor
+    unit_of_measurement: "°C"
+    lambda: |-
+      return 22.3;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock Indoor Humidity"
+    id: humid_indoor
+    unit_of_measurement: "%"
+    lambda: |-
+      return 48;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock Outdoor Temperature"
+    id: temp_outdoor
+    unit_of_measurement: "°C"
+    lambda: |-
+      return 17.6;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock Outdoor Humidity"
+    id: humid_outdoor
+    unit_of_measurement: "%"
+    lambda: |-
+      return 64;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock Outdoor PM2.5"
+    id: pm25_outdoor
+    unit_of_measurement: "µg/m³"
+    lambda: |-
+      return 58.0;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock WiFi Signal"
+    id: wifisignal
+    unit_of_measurement: "dBm"
+    lambda: |-
+      return -61.0;
+    update_interval: 60s
+
+  - platform: template
+    name: "Mock Battery Voltage"
+    id: battery_voltage
+    unit_of_measurement: "V"
+    lambda: |-
+      return 3.84;
+    update_interval: 60s
 
 spi:
   clk_pin: 18
@@ -73,8 +273,204 @@ display:
     reset_pin: 16
     model: 5.79in
     update_interval: never
-    # full_update_every: 30
     lambda: |-
-      it.filled_rectangle(it.get_width()/2, 0, it.get_width()/2, it.get_height());
-      it.print(it.get_width()/4,   it.get_height()/2,   id(font_main), COLOR_ON,  TextAlign::CENTER, "Lookie");
-      it.print(it.get_width()*3/4, it.get_height()/2,   id(font_main), COLOR_OFF, TextAlign::CENTER, "Here!");
+      // Constants
+      const int screen_width = 792;
+      const int screen_height = 272;
+      const int pm25_danger = 40;
+
+      // Read sensor values
+      float out_temp = id(temp_outdoor).state;
+      int out_hum = int(id(humid_outdoor).state);
+      int out_pm25 = int(id(pm25_outdoor).state);
+      float in_temp = id(temp_indoor).state;
+      int in_hum = int(id(humid_indoor).state);
+      int in_pm25 = int(id(pm25_indoor).state);
+      float batt = id(battery_voltage).state;
+      int wifi = id(wifisignal).state;
+
+      // === HEADER ===
+      it.printf(screen_width/2, 5, id(title_font), TextAlign::TOP_CENTER, "ENVIRONMENTAL DASHBOARD");
+      it.strftime(screen_width - 10, 8, id(small_font), TextAlign::TOP_RIGHT, "%d/%b %H:%M", id(homeassistant_time).now());
+
+      // Header separator line
+      it.filled_rectangle(10, 28, screen_width - 20, 1);
+
+      // === FUNCTION: DRAW CIRCULAR GAUGE ===
+      auto draw_gauge = [&](int cx, int cy, int radius, float value, float min_val, float max_val, const char* label, const char* unit, bool show_danger = false) {
+        // Outer circle
+        it.circle(cx, cy, radius);
+        it.circle(cx, cy, radius - 1);
+        
+        // Inner circle for contrast
+        it.circle(cx, cy, radius - 15);
+        
+        // Calculate angle for value (180° arc, bottom half)
+        float normalized = (value - min_val) / (max_val - min_val);
+        normalized = max(0.0f, min(1.0f, normalized));
+        float angle = 3.14159f * normalized; // 0 to π radians
+        
+        // Draw tick marks
+        for (int i = 0; i <= 10; i++) {
+          float tick_angle = 3.14159f * i / 10.0f;
+          int x1 = cx + (radius - 5) * cos(tick_angle);
+          int y1 = cy - (radius - 5) * sin(tick_angle);
+          int x2 = cx + (radius - 10) * cos(tick_angle);
+          int y2 = cy - (radius - 10) * sin(tick_angle);
+          it.line(x1, y1, x2, y2);
+        }
+        
+        // Draw value arc (thicker line)
+        for (float a = 0; a <= angle; a += 0.1f) {
+          int x = cx + (radius - 7) * cos(a);
+          int y = cy - (radius - 7) * sin(a);
+          it.filled_circle(x, y, 2);
+        }
+        
+        // Needle
+        int needle_x = cx + (radius - 20) * cos(angle);
+        int needle_y = cy - (radius - 20) * sin(angle);
+        it.line(cx, cy, needle_x, needle_y);
+        it.filled_circle(cx, cy, 3);
+        
+        // Value text
+        it.printf(cx, cy + 8, id(gauge_value_font), TextAlign::CENTER, "%.1f%s", value, unit);
+        it.printf(cx, cy - radius - 15, id(gauge_label_font), TextAlign::CENTER, "%s", label);
+        
+        // Show danger indicator
+        if (show_danger && ((label[0] == 'P' && value >= pm25_danger) || value >= 80)) {
+          it.print(cx + radius - 10, cy - radius + 5, id(mdi_icons), "󰀦");
+        }
+      };
+
+      // === FUNCTION: DRAW HORIZONTAL BAR ===
+      auto draw_bar = [&](int x, int y, int width, int height, float value, float max_val, const char* label, const char* unit) {
+        // Bar outline
+        it.rectangle(x, y, width, height);
+        
+        // Fill bar
+        int fill_width = (value / max_val) * (width - 2);
+        it.filled_rectangle(x + 1, y + 1, fill_width, height - 2);
+        
+        // Value text
+        it.printf(x + width + 5, y + height/2 - 6, id(medium_font), "%.1f%s", value, unit);
+        it.printf(x, y - 15, id(gauge_label_font), "%s", label);
+      };
+
+      // === TEMPERATURE GAUGES ===
+      // Outdoor temperature gauge
+      draw_gauge(120, 100, 40, out_temp, -10, 40, "OUTDOOR", "°C");
+
+      // Indoor temperature gauge  
+      draw_gauge(280, 100, 40, in_temp, 15, 30, "INDOOR", "°C");
+
+      // === HUMIDITY BARS ===
+      draw_bar(360, 70, 120, 15, out_hum, 100, "OUTDOOR HUMIDITY", "%");
+      draw_bar(360, 110, 120, 15, in_hum, 100, "INDOOR HUMIDITY", "%");
+
+      // === PM2.5 GAUGES ===
+      draw_gauge(550, 100, 40, out_pm25, 0, 100, "OUT PM2.5", "µg", true);
+      draw_gauge(670, 100, 40, in_pm25, 0, 100, "IN PM2.5", "µg", true);
+
+      // === SYSTEM STATUS SECTION ===
+      it.rectangle(10, 155, 772, 50);
+      it.printf(20, 160, id(gauge_label_font), "SYSTEM STATUS");
+
+      // Battery gauge (horizontal mini-gauge)
+      int batt_x = 30, batt_y = 180;
+      float batt_percent = ((batt - 3.0) / (4.2 - 3.0)) * 100;
+      batt_percent = max(0.0f, min(100.0f, batt_percent));
+
+      it.rectangle(batt_x, batt_y, 80, 15);
+      int batt_fill = (batt_percent / 100.0) * 78;
+      it.filled_rectangle(batt_x + 1, batt_y + 1, batt_fill, 13);
+      it.printf(batt_x + 85, batt_y + 3, id(small_font), "%.2fV (%.0f%%)", batt, batt_percent);
+      it.print(batt_x - 20, batt_y + 3, id(mdi_icons), "󰁹");
+
+      // WiFi signal strength
+      int wifi_x = 300;
+      it.print(wifi_x, batt_y + 3, id(mdi_icons), "󰤭");
+      it.printf(wifi_x + 30, batt_y + 3, id(small_font), "%ddBm", wifi);
+
+      // WiFi strength bars
+      int bar_x = wifi_x + 100;
+      for (int i = 0; i < 4; i++) {
+        int bar_height = 5 + i * 3;
+        bool filled = false;
+        if (wifi >= -50) filled = true;
+        else if (wifi >= -60 && i < 3) filled = true;
+        else if (wifi >= -75 && i < 2) filled = true;
+        else if (wifi >= -100 && i < 1) filled = true;
+        
+        if (filled) {
+          it.filled_rectangle(bar_x + i * 8, batt_y + 15 - bar_height, 6, bar_height);
+        } else {
+          it.rectangle(bar_x + i * 8, batt_y + 15 - bar_height, 6, bar_height);
+        }
+      }
+
+      // Last update time
+      it.printf(screen_width - 20, batt_y + 3, id(small_font), TextAlign::TOP_RIGHT, "Updated: ");
+      it.strftime(screen_width - 20, batt_y + 15, id(small_font), TextAlign::TOP_RIGHT, "%H:%M:%S", id(homeassistant_time).now());
+
+      // === TREND GRAPH SECTION ===
+      int graph_x = 10, graph_y = 215, graph_w = 550, graph_h = 45;
+
+      // Graph border
+      it.rectangle(graph_x, graph_y, graph_w, graph_h);
+      it.printf(graph_x, graph_y - 12, id(gauge_label_font), "PM2.5 TREND (24H)");
+
+      // Mock 24-hour data (hourly readings)
+      float trend_data[24] = {
+        12, 15, 18, 22, 28, 35, 42, 38, 33, 28, 25, 23,
+        26, 31, 36, 42, 48, 52, 46, 38, 32, 26, 20, 15
+      };
+
+      // Draw grid lines
+      for (int i = 1; i < 4; i++) {
+        int y_pos = graph_y + (graph_h * i / 4);
+        for (int x = graph_x + 10; x < graph_x + graph_w - 10; x += 10) {
+          it.filled_rectangle(x, y_pos, 2, 1);
+        }
+      }
+
+      // Draw trend line
+      for (int i = 0; i < 23; i++) {
+        int x1 = graph_x + 5 + (i * (graph_w - 10) / 23);
+        int y1 = graph_y + graph_h - 5 - (trend_data[i] * (graph_h - 10) / 60);
+        int x2 = graph_x + 5 + ((i + 1) * (graph_w - 10) / 23);
+        int y2 = graph_y + graph_h - 5 - (trend_data[i + 1] * (graph_h - 10) / 60);
+        
+        it.line(x1, y1, x2, y2);
+        it.filled_circle(x1, y1, 1);
+      }
+
+      // Y-axis labels
+      it.printf(graph_x + graph_w + 5, graph_y + 5, id(small_font), "60");
+      it.printf(graph_x + graph_w + 5, graph_y + graph_h/2, id(small_font), "30");
+      it.printf(graph_x + graph_w + 5, graph_y + graph_h - 5, id(small_font), "0");
+
+      // Current outdoor vs indoor comparison
+      int comp_x = 580, comp_y = 215;
+      it.rectangle(comp_x, comp_y, 200, 45);
+      it.printf(comp_x + 5, comp_y - 12, id(gauge_label_font), "AIR QUALITY");
+
+      // Comparison bars
+      it.printf(comp_x + 10, comp_y + 8, id(small_font), "OUT:");
+      it.rectangle(comp_x + 40, comp_y + 5, 100, 8);
+      int out_bar = (out_pm25 * 98 / 100);
+      it.filled_rectangle(comp_x + 41, comp_y + 6, out_bar, 6);
+      it.printf(comp_x + 145, comp_y + 5, id(small_font), "%dµg", out_pm25);
+
+      it.printf(comp_x + 10, comp_y + 25, id(small_font), "IN:");
+      it.rectangle(comp_x + 40, comp_y + 22, 100, 8);
+      int in_bar = (in_pm25 * 98 / 100);
+      it.filled_rectangle(comp_x + 41, comp_y + 23, in_bar, 6);
+      it.printf(comp_x + 145, comp_y + 22, id(small_font), "%dµg", in_pm25);
+
+      // Air quality status
+      const char* air_quality = "GOOD";
+      if (max(out_pm25, in_pm25) > 50) air_quality = "POOR";
+      else if (max(out_pm25, in_pm25) > 25) air_quality = "FAIR";
+
+      it.printf(comp_x + 100, comp_y + 35, id(small_font), TextAlign::CENTER, "%s", air_quality);
