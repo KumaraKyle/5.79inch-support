@@ -262,6 +262,13 @@ spi:
   clk_pin: 18
   mosi_pin: 23
 
+color:
+  - id: COLOR_RED
+    red: 100%
+    green: 0%
+    blue: 0%
+    white: 0%
+
 display:
   - platform: waveshare_epaper_custom
     id: eink
@@ -288,6 +295,15 @@ display:
       int in_pm25 = int(id(pm25_indoor).state);
       float batt = id(battery_voltage).state;
       int wifi = id(wifisignal).state;
+
+      it.print(10, 10, id(font_main), "Hello Black");
+
+      // Test red text  
+      it.print(10, 50, id(font_main), COLOR_RED, "Hello Red!");
+
+      // Test red shapes
+      it.rectangle(100, 100, 200, 50, COLOR_RED);
+      it.filled_rectangle(100, 200, 200, 50, COLOR_RED);
 
       // === HEADER ===
       it.printf(screen_width/2, 5, id(title_font), TextAlign::TOP_CENTER, "ENVIRONMENTAL DASHBOARD");

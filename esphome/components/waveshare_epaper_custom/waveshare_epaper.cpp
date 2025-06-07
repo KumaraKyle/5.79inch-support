@@ -2011,30 +2011,30 @@ void WaveshareEPaper4P2InBV2::dump_config() {
 //   |_____________________________|_____________________________|
 //
 // ========================================================
-// Keep your existing methods unchanged:
 int WaveshareEPaper5P7In::get_width_internal() { return 792; }
 int WaveshareEPaper5P7In::get_height_internal() { return 272; }
 int WaveshareEPaper5P7In::get_width_controller() { return 800; }
-
 void WaveshareEPaper5P7In::dump_config() {
   LOG_DISPLAY("", "Waveshare E-Paper", this);
-  ESP_LOGCONFIG(TAG, "  Model: 5.79in (B/W/R)"); // Updated to show red support
+  ESP_LOGCONFIG(TAG, "  Model: 5.79in");
   LOG_PIN("  Reset Pin: ", this->reset_pin_);
   LOG_PIN("  DC Pin: ", this->dc_pin_);
   LOG_PIN("  Busy Pin: ", this->busy_pin_);
   LOG_UPDATE_INTERVAL(this);
 }
 
-// Keep your existing reset_ and wait_until_idle_ methods unchanged
+// WaveshareEPaper5P7In::WaveshareEPaper5P7In() { this->reset_duration_ = 10; }
+
 void WaveshareEPaper5P7In::reset_() {
   if (this->reset_pin_ != nullptr) {
     this->reset_pin_->digital_write(false);
+    // delay(reset_duration_);  // NOLINT
     delay(200);  // NOLINT
     this->reset_pin_->digital_write(true);
+    // delay(reset_duration_);  // NOLINT
     delay(200);  // NOLINT
   }
 }
-
 bool WaveshareEPaper5P7In::wait_until_idle_() {
   if (this->busy_pin_ == nullptr) {
     return true;
@@ -2053,7 +2053,6 @@ bool WaveshareEPaper5P7In::wait_until_idle_() {
   return true;
 };
 
-// Keep your existing initialize method unchanged
 void WaveshareEPaper5P7In::initialize() {
   this->reset_();
   this->wait_until_idle_();
@@ -2107,62 +2106,61 @@ void WaveshareEPaper5P7In::initialize() {
   this->wait_until_idle_();
 }
 
-// MODIFIED DISPLAY METHOD - This is the key change for red support
 void HOT WaveshareEPaper5P7In::display() {
-  int Width, Width1, Height;
-  Width = (this->get_width_internal() % 16 == 0) ? (this->get_width_internal() / 16)
-                                                 : (this->get_width_internal() / 16 + 1);
-  Width1 = (this->get_width_controller() % 8 == 0) ? (this->get_width_controller() / 8)
-                                                   : (this->get_width_controller() / 8 + 1);
-  Height = this->get_height_internal();
+  const int buffer_len_per_color = this->get_buffer_length_() / this->get_color_internal();
+  const uint8_t* bw_buffer = this->buffer_;
+  const uint8_t* red_buffer = this->buffer_ + buffer_len_per_color;
 
-  // Calculate buffer split point for B/W and RED data
-  const int buffer_length = this->get_buffer_length_() / get_color_internal();
-  uint8_t* bw_buffer = this->buffer_;                    // First half: B/W data
-  uint8_t* red_buffer = this->buffer_ + buffer_length;   // Second half: RED data
+  int Width = (this->get_width_internal() % 16 == 0)
+                  ? (this->get_width_internal() / 16)
+                  : (this->get_width_internal() / 16 + 1);
+  int Width1 = (this->get_width_controller() % 8 == 0)
+                   ? (this->get_width_controller() / 8)
+                   : (this->get_width_controller() / 8 + 1);
+  int Height = this->get_height_internal();
 
   this->initialize();
 
-  // ========== BLACK/WHITE DATA TRANSMISSION ==========
-  
-  // M part 396*272 - BLACK/WHITE
-  this->command(0x24);  // Write Black/White data to M controller
+  // ===== BLACK/WHITE Data =====
+  this->command(0x24);  // Write B/W RAM (M)
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
       this->data(bw_buffer[j * Width1 + i]);
     }
   }
 
-  // M part 396*272 - RED 
-  this->command(0x26);  // Write Red data to M controller
-  for (int j = 0; j < Height; j++) {
-    for (int i = 0; i < Width; i++) {
-      this->data(red_buffer[j * Width1 + i]);
-    }
-  }
-
-  // S part 396*272 - BLACK/WHITE
-  this->command(0xA4);  // Write Black/White data to S controller
+  this->command(0xA4);  // Write B/W RAM (S)
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
       this->data(bw_buffer[j * Width1 + i + (Width1 / 2) - 1]);
     }
   }
 
-  // S part 396*272 - RED
-  this->command(0xA6);  // Write Red data to S controller  
+  // ===== RED Data =====
+  this->command(0x26);  // Write RED RAM (M)
+  for (int j = 0; j < Height; j++) {
+    for (int i = 0; i < Width; i++) {
+      this->data(red_buffer[j * Width1 + i]);
+    }
+  }
+
+  this->command(0xA6);  // Write RED RAM (S)
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
       this->data(red_buffer[j * Width1 + i + (Width1 / 2) - 1]);
     }
   }
 
-  // Turn on display
+  App.feed_wdt();
+  delay(2);
+
+  // ===== Refresh =====
   this->command(0x22);  // Display Update Control
-  this->data(0xF7);
-  this->command(0x20);  // Activate Display Update Sequence
+  this->data(0xF7);     // Enable clock, analog, and display update
+  this->command(0x20);  // Activate display update
   this->wait_until_idle_();
 }
+
 
 void WaveshareEPaper5P8In::initialize() {
   // COMMAND POWER SETTING

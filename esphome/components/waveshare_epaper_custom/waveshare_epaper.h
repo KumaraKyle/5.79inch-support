@@ -502,10 +502,14 @@ class WaveshareEPaper5P7In : public WaveshareEPaper {
     this->data(0x01);  // check code
   }
 
+  // Indicates that the display uses 2 color planes (B/W + RED)
   int get_color_internal() override { return 2; }
+
+  // Maps index to color (0 = black, 1 = red)
   uint8_t get_color_list_internal(uint8_t indexColor) override {
-    if(indexColor == 1) return display::ColorUtil::color_to_332(Color(255, 0, 0, 0)); // RED
-    return display::ColorUtil::color_to_332(display::COLOR_ON); // BLACK
+    if (indexColor == 1)
+      return display::ColorUtil::color_to_332(Color(255, 0, 0, 0));  // RED
+    return display::ColorUtil::color_to_332(display::COLOR_ON);      // BLACK
   }
 
  protected:
