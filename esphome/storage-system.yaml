@@ -9,8 +9,8 @@ esphome:
 
 external_components:
   - source:
-      type: git
-      url: https://github.com/KumaraKyle/5.79inch-support
+      type: local
+      path: components
 
 esp32:
   board: esp32dev
@@ -257,17 +257,26 @@ sensor:
     lambda: |-
       return 3.84;
     update_interval: 60s
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+
+pn532_i2c:
+  update_interval: 1s
+  on_tag:
+    then:
+      - lambda: |-
+          ESP_LOGD("pn532", "Detected tag with UID: %s", x.c_str());
+
+binary_sensor:
+  - platform: pn532
+    uid: 74-10-37-94
+    name: "PN532 NFC Tag"
 
 spi:
   clk_pin: 18
   mosi_pin: 23
-
-color:
-  - id: COLOR_RED
-    red: 100%
-    green: 0%
-    blue: 0%
-    white: 0%
 
 display:
   - platform: waveshare_epaper_custom
@@ -295,15 +304,6 @@ display:
       int in_pm25 = int(id(pm25_indoor).state);
       float batt = id(battery_voltage).state;
       int wifi = id(wifisignal).state;
-
-      it.print(10, 10, id(font_main), "Hello Black");
-
-      // Test red text  
-      it.print(10, 50, id(font_main), COLOR_RED, "Hello Red!");
-
-      // Test red shapes
-      it.rectangle(100, 100, 200, 50, COLOR_RED);
-      it.filled_rectangle(100, 200, 200, 50, COLOR_RED);
 
       // === HEADER ===
       it.printf(screen_width/2, 5, id(title_font), TextAlign::TOP_CENTER, "ENVIRONMENTAL DASHBOARD");

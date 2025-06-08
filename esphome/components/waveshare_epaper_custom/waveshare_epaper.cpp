@@ -2105,62 +2105,68 @@ void WaveshareEPaper5P7In::initialize() {
   this->data(((this->get_height_internal() - 1) >> 8) & 0xFF);
   this->wait_until_idle_();
 }
+// Helper function: mirrors bits in a byte (e.g. 0b10000000 → 0b00000001)
+uint8_t mirror_byte(uint8_t b) {
+  b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+  b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+  b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+  return b;
+}
+
 
 void HOT WaveshareEPaper5P7In::display() {
-  const int buffer_len_per_color = this->get_buffer_length_() / this->get_color_internal();
-  const uint8_t* bw_buffer = this->buffer_;
-  const uint8_t* red_buffer = this->buffer_ + buffer_len_per_color;
+  int Width, Width1, Height;
+  Width = (this->get_width_internal() % 16 == 0) ? (this->get_width_internal() / 16)
+                                                 : (this->get_width_internal() / 16 + 1);
+  Width1 = (this->get_width_controller() % 8 == 0) ? (this->get_width_controller() / 8)
+                                                   : (this->get_width_controller() / 8 + 1);
+  Height = this->get_height_internal();
 
-  int Width = (this->get_width_internal() % 16 == 0)
-                  ? (this->get_width_internal() / 16)
-                  : (this->get_width_internal() / 16 + 1);
-  int Width1 = (this->get_width_controller() % 8 == 0)
-                   ? (this->get_width_controller() / 8)
-                   : (this->get_width_controller() / 8 + 1);
-  int Height = this->get_height_internal();
+  const uint8_t *black_buf = this->buffer_;
+  int buffer_len = this->get_buffer_length_() / this->get_color_internal();  // ✅ FIXED
+  const uint8_t *red_buf   = black_buf + buffer_len;
+
 
   this->initialize();
 
-  // ===== BLACK/WHITE Data =====
-  this->command(0x24);  // Write B/W RAM (M)
+  // M part 396*272
+  this->command(0x24);
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
-      this->data(bw_buffer[j * Width1 + i]);
+      this->data(this->buffer_[j * Width1 + i]);
     }
   }
 
-  this->command(0xA4);  // Write B/W RAM (S)
+  this->command(0x26);
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
-      this->data(bw_buffer[j * Width1 + i + (Width1 / 2) - 1]);
+      this->data(0x00);
     }
   }
 
-  // ===== RED Data =====
-  this->command(0x26);  // Write RED RAM (M)
+  // S part 396*272
+  this->command(0xA4);
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
-      this->data(red_buffer[j * Width1 + i]);
+      this->data(this->buffer_[j * Width1 + i + (Width1 / 2) - 1]);
     }
   }
 
-  this->command(0xA6);  // Write RED RAM (S)
+  this->command(0xA6);
   for (int j = 0; j < Height; j++) {
     for (int i = 0; i < Width; i++) {
-      this->data(red_buffer[j * Width1 + i + (Width1 / 2) - 1]);
+      this->data(0x00);
     }
   }
 
-  App.feed_wdt();
-  delay(2);
 
-  // ===== Refresh =====
+
+  // Turn on display
   this->command(0x22);  // Display Update Control
-  this->data(0xF7);     // Enable clock, analog, and display update
-  this->command(0x20);  // Activate display update
+  this->data(0xF7);
+  this->command(0x20);  // Activate Display Update Sequence
   this->wait_until_idle_();
 }
-
 
 void WaveshareEPaper5P8In::initialize() {
   // COMMAND POWER SETTING
